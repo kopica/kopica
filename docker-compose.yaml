@@ -46,3 +46,42 @@ services:
       interval: 30s
       timeout: 10s
       retries: 6
+      
+  node-red:
+    container_name: node-red
+    image: nodered/node-red
+    ports:
+      - 1880:1880
+    volumes:
+      - /opt/node-red:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    restart: "no" # because the exit code(s) are wrong
+    depends_on:
+      homeassistant:
+        condition: service_healthy
+        
+# Here we define what networks are available to use by the services above
+# Make sure to set the config of both macvlan and vlan_bridge as described in the guide.
+networks:
+  macvlan:
+    name: docker_macvlan
+    driver: macvlan
+    enable_ipv6: false
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: 192.168.50.0/24 # Set to same subnet as your router and other devices
+          ip_range: 192.168.50.192/27 # Available range from 192 to 224.
+          gateway: 192.168.50.1 # This is your router IP
+
+  vlan_bridge:
+    name: docker_vlan_bridge
+    driver: bridge
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: 192.168.10.0/24 # subnet for all containers
+          ip_range: 192.168.10.192/27 # for easier use, set to same range as under macvlan (192 to 224 here)
+          gateway: 192.168.10.1 # for easier use, set to same last number as your router
